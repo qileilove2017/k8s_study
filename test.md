@@ -51,11 +51,21 @@ def HelloHttp(req: func.HttpRequest) -> func.HttpResponse:
 local.settings.json
 
 ```
-/Users/a123/work/myfunc/local.settings.json
-
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true"
+  }
+}
 ```
 requirements.txt
 
 ```
-/Users/a123/work/myfunc/requirements.txt
+# Uncomment to enable Azure Monitor OpenTelemetry
+# Ref: aka.ms/functions-azure-monitor-python 
+# azure-monitor-opentelemetry 
+
+azure-functions
 ```
+
