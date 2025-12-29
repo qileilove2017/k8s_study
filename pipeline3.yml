@@ -1,0 +1,128 @@
+```
+trigger:
+- main
+
+variables:
+  pythonVersion: '3.11'
+  azureServiceConnection: '<YOUR_AZURE_SERVICE_CONNECTION>'
+  functionAppName: 'func-runfrompkg-demo'     # 你的 Function App 名称
+  artifactName: 'package'
+
+pool:
+  # 私网/限制访问的 SCM 站点：建议用 VNet 内 self-hosted agent
+  name: 'pool-vnet'
+
+stages:
+- stage: Build
+  displayName: Build Zip
+  jobs:
+  - job: BuildZip
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+
+    - script: |
+        set -e
+        python -m pip install --upgrade pip
+
+        # 将依赖安装到 Functions 运行时约定目录
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt --target ".python_packages/lib/site-packages"
+        fi
+
+        ZIP_NAME="func-$(Build.BuildId).zip"
+        zip -r "$ZIP_NAME" . \
+          -x ".git/*" \
+          -x ".venv/*" \
+          -x "__pycache__/*" \
+          -x "*.pyc" \
+          -x ".pytest_cache/*"
+
+        mkdir -p "$(Build.ArtifactStagingDirectory)"
+        mv "$ZIP_NAME" "$(Build.ArtifactStagingDirectory)/"
+      displayName: "Install deps & zip"
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: $(artifactName)
+
+- stage: Deploy
+  displayName: ZipDeploy via Entra Token
+  dependsOn: Build
+  jobs:
+  - job: ZipDeploy
+    steps:
+    - download: current
+      artifact: $(artifactName)
+
+    - task: AzureCLI@2
+      displayName: "ZipDeploy to SCM with Bearer token"
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          ZIP_NAME="func-$(Build.BuildId).zip"
+          ZIP_PATH="$(Pipeline.Workspace)/$(artifactName)/$ZIP_NAME"
+
+          # 1) 获取 Entra access token（默认就是 ARM 资源）
+          ACCESS_TOKEN="$(az account get-access-token --query accessToken -o tsv)"
+
+          SCM_URL="https://$(functionAppName).scm.azurewebsites.net"
+          ZIPDEPLOY_API="$SCM_URL/api/zipdeploy"
+
+          echo "Starting zipdeploy (token hidden)..."
+
+          # 2) 发起 zipdeploy（建议加 async=true，避免连接过久）
+          # 返回通常是 202 Accepted
+          HTTP_CODE=$(curl -sS -o /tmp/zipdeploy_resp.txt -w "%{http_code}" \
+            -X POST \
+            --data-binary "@${ZIP_PATH}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/zip" \
+            "${ZIPDEPLOY_API}?isAsync=true")
+
+          echo "zipdeploy http_code=${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "200" ] && [ "${HTTP_CODE}" != "202" ]; then
+            echo "zipdeploy failed response:"
+            cat /tmp/zipdeploy_resp.txt || true
+            exit 1
+          fi
+
+          # 3) 轮询部署状态
+          # /api/deployments/latest 返回当前/最新部署信息
+          STATUS_API="$SCM_URL/api/deployments/latest"
+
+          echo "Polling deployment status..."
+          for i in $(seq 1 60); do
+            # 取 status：4=success，3=failed，0/1/2=running（Kudu 常见枚举）
+            RESP=$(curl -sS \
+              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+              -H "Accept: application/json" \
+              "${STATUS_API}" || true)
+
+            STATUS=$(echo "$RESP" | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+            PROGRESS=$(echo "$RESP" | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('progress',''))" 2>/dev/null || echo "")
+
+            echo "Attempt $i: status=$STATUS progress=$PROGRESS"
+
+            if [ "$STATUS" = "4" ]; then
+              echo "Deployment succeeded."
+              exit 0
+            fi
+            if [ "$STATUS" = "3" ]; then
+              echo "Deployment failed. Details:"
+              echo "$RESP"
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          echo "Deployment status polling timed out."
+          exit 1
+```

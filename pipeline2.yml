@@ -1,0 +1,132 @@
+```
+trigger:
+- main
+
+variables:
+  pythonVersion: '3.11'
+
+  # Azure 资源
+  azureServiceConnection: '<YOUR_AZURE_SERVICE_CONNECTION>'
+  resourceGroupName: 'rg-func-runfrompkg'
+  functionAppName: 'func-runfrompkg-demo'
+
+  # packages Storage
+  packageStorageAccount: 'pkgsarunfrompkg123'
+  packageContainer: 'packages'
+
+pool:
+  # ⚠️ 私网必需：self-hosted agent
+  name: 'pool-vnet'
+
+stages:
+# =========================
+# Stage 1: Build Package
+# =========================
+- stage: Build
+  displayName: Build Python Function Package
+  jobs:
+  - job: BuildZip
+    displayName: Build zip
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+
+    - script: |
+        set -e
+
+        echo "Installing dependencies into .python_packages"
+        python -m pip install --upgrade pip
+
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt \
+            --target ".python_packages/lib/site-packages"
+        fi
+
+        ZIP_NAME="func-$(Build.BuildId).zip"
+        echo "Creating $ZIP_NAME"
+
+        zip -r "$ZIP_NAME" . \
+          -x ".git/*" \
+          -x ".venv/*" \
+          -x "__pycache__/*" \
+          -x "*.pyc" \
+          -x ".pytest_cache/*"
+
+        mkdir -p $(Build.ArtifactStagingDirectory)
+        mv "$ZIP_NAME" $(Build.ArtifactStagingDirectory)/
+      displayName: Install deps & zip
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: package
+
+# =========================
+# Stage 2: Deploy
+# =========================
+- stage: Deploy
+  displayName: Deploy via WEBSITE_RUN_FROM_PACKAGE
+  dependsOn: Build
+  jobs:
+  - job: Deploy
+    displayName: Upload zip & update app settings
+    steps:
+    - download: current
+      artifact: package
+
+    - task: AzureCLI@2
+      displayName: Upload package & set WEBSITE_RUN_FROM_PACKAGE
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+
+          ZIP_NAME="func-$(Build.BuildId).zip"
+          ZIP_PATH="$(Pipeline.Workspace)/package/$ZIP_NAME"
+
+          echo "Uploading $ZIP_NAME to private blob"
+
+          az storage blob upload \
+            --account-name "$(packageStorageAccount)" \
+            --container-name "$(packageContainer)" \
+            --name "$ZIP_NAME" \
+            --file "$ZIP_PATH" \
+            --overwrite true \
+            --auth-mode login
+
+          # 生成 SAS（只读，90 天）
+          EXPIRY=$(date -u -d "+90 days" '+%Y-%m-%dT%H:%MZ')
+
+          SAS=$(az storage blob generate-sas \
+            --account-name "$(packageStorageAccount)" \
+            --container-name "$(packageContainer)" \
+            --name "$ZIP_NAME" \
+            --permissions r \
+            --expiry "$EXPIRY" \
+            --https-only \
+            --auth-mode login \
+            -o tsv)
+
+          RUN_FROM_PKG_URL="https://$(packageStorageAccount).blob.core.windows.net/$(packageContainer)/$ZIP_NAME?$SAS"
+
+          echo "Updating Function App settings (SAS masked)"
+
+          az functionapp config appsettings set \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(functionAppName)" \
+            --settings \
+              WEBSITE_RUN_FROM_PACKAGE="$RUN_FROM_PKG_URL" \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=0 \
+              ENABLE_ORYX_BUILD=0 \
+              WEBSITE_VNET_ROUTE_ALL=1 \
+              APP_RELEASE_BUILDID="$(Build.BuildId)"
+
+          echo "Restarting Function App"
+
+          az functionapp restart \
+            --resource-group "$(resourceGroupName)" \
+            --name "$(functionAppName)"
+```
