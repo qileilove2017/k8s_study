@@ -1,0 +1,140 @@
+```
+trigger:
+- main
+
+variables:
+  pythonVersion: '3.11'
+
+  azureServiceConnection: '<YOUR_AZURE_SERVICE_CONNECTION>'
+  resourceGroupName: 'rg-func-runfrompkg'
+  functionAppName: 'func-runfrompkg-demo'
+
+  packageStorageAccount: 'pkgsarunfrompkg123'
+  packageContainer: 'packages'
+
+pool:
+  # Windows self-hosted agent pool
+  name: 'pool-vnet-windows'
+
+stages:
+# =========================
+# Stage 1: Build Package
+# =========================
+- stage: Build
+  displayName: Build Python Function Package (Windows)
+  jobs:
+  - job: BuildZip
+    displayName: Build zip
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+
+    - powershell: |
+        $ErrorActionPreference = "Stop"
+
+        Write-Host "Installing dependencies into .python_packages"
+        python -m pip install --upgrade pip
+
+        if (Test-Path "requirements.txt") {
+          pip install -r requirements.txt --target ".python_packages\lib\site-packages"
+        }
+
+        $zipName = "func-$(Build.BuildId).zip"
+        $zipPath = Join-Path "$(Build.ArtifactStagingDirectory)" $zipName
+
+        if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+
+        # 排除无关目录（可按需加）
+        $excludeNames = @(".git", ".venv", "__pycache__", ".pytest_cache")
+
+        # Compress-Archive 需要文件列表，不能直接排除模式，所以手工筛一下
+        $items = Get-ChildItem -Force | Where-Object { $excludeNames -notcontains $_.Name }
+
+        New-Item -ItemType Directory -Force -Path "$(Build.ArtifactStagingDirectory)" | Out-Null
+        Compress-Archive -Path $items.FullName -DestinationPath $zipPath -Force
+
+        Write-Host "Zip created: $zipPath"
+      displayName: Install deps & create zip
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: package
+
+# =========================
+# Stage 2: Deploy
+# =========================
+- stage: Deploy
+  displayName: Deploy via WEBSITE_RUN_FROM_PACKAGE (Windows)
+  dependsOn: Build
+  jobs:
+  - job: Deploy
+    displayName: Upload zip & update app settings
+    steps:
+    - download: current
+      artifact: package
+
+    - task: AzureCLI@2
+      displayName: Upload package & set WEBSITE_RUN_FROM_PACKAGE (pwsh)
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: |
+          $ErrorActionPreference = "Stop"
+
+          $zipName = "func-$(Build.BuildId).zip"
+          $zipPath = Join-Path "$(Pipeline.Workspace)\package" $zipName
+
+          if (!(Test-Path $zipPath)) {
+            throw "Zip not found: $zipPath"
+          }
+
+          Write-Host "Uploading $zipName to private blob..."
+
+          az storage blob upload `
+            --account-name "$(packageStorageAccount)" `
+            --container-name "$(packageContainer)" `
+            --name "$zipName" `
+            --file "$zipPath" `
+            --overwrite true `
+            --auth-mode login | Out-Null
+
+          # 生成 SAS（只读，90 天）
+          $expiry = (Get-Date).ToUniversalTime().AddDays(90).ToString("yyyy-MM-ddTHH:mmZ")
+
+          $sas = az storage blob generate-sas `
+            --account-name "$(packageStorageAccount)" `
+            --container-name "$(packageContainer)" `
+            --name "$zipName" `
+            --permissions r `
+            --expiry "$expiry" `
+            --https-only `
+            --auth-mode login `
+            -o tsv
+
+          if ([string]::IsNullOrWhiteSpace($sas)) {
+            throw "Failed to generate SAS."
+          }
+
+          $runFromPkgUrl = "https://$(packageStorageAccount).blob.core.windows.net/$(packageContainer)/$zipName`?$sas"
+
+          # ⚠️ 不要把完整 SAS URL 输出到日志
+          Write-Host "Updating Function App settings (SAS masked)..."
+
+          az functionapp config appsettings set `
+            --resource-group "$(resourceGroupName)" `
+            --name "$(functionAppName)" `
+            --settings `
+              "WEBSITE_RUN_FROM_PACKAGE=$runFromPkgUrl" `
+              "SCM_DO_BUILD_DURING_DEPLOYMENT=0" `
+              "ENABLE_ORYX_BUILD=0" `
+              "WEBSITE_VNET_ROUTE_ALL=1" `
+              "APP_RELEASE_BUILDID=$(Build.BuildId)" | Out-Null
+
+          Write-Host "Restarting Function App..."
+          az functionapp restart `
+            --resource-group "$(resourceGroupName)" `
+            --name "$(functionAppName)" | Out-Null
+```
