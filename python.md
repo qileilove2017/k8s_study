@@ -129,3 +129,97 @@ azure-storage-blob
 azure-eventhub
 
 ```
+tf 改进
+```
+# --- 1. 存储账户配置 ---
+resource "azurerm_storage_account" "st" {
+  name                     = "stinternalprod001"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  # 禁用共享密钥，强制使用 Entra ID
+  shared_access_key_enabled = false
+  
+  # 限制公网访问
+  public_network_access_enabled = false 
+
+  network_rules {
+    default_action = "Deny"
+    bypass         = ["AzureServices"]
+  }
+}
+
+# --- 2. Function App 配置 ---
+resource "azurerm_linux_function_app" "func" {
+  name                = "fn-blob-processor-prod"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+
+  service_plan_id            = azurerm_service_plan.asp.id
+  storage_account_name       = azurerm_storage_account.st.name
+  # 虽然禁用了 Key，但 TF 部署初期可能需要此 Key 建立连接，建议保留引用
+  storage_account_access_key = azurerm_storage_account.st.primary_access_key
+
+  # 开启 VNet 集成
+  virtual_network_subnet_id = azurerm_subnet.func_subnet.id
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    vnet_route_all_enabled = true # 关键：确保所有流量走内网
+    application_stack {
+      python_version = "3.9"
+    }
+  }
+
+  app_settings = {
+    # 内部运行依赖存储（基于身份）
+    "AzureWebJobsStorage__accountName" = azurerm_storage_account.st.name
+    "AzureWebJobsStorage__credential"  = "managedidentity"
+
+    # 业务 Trigger 连接配置
+    "MyStorageConfig__accountName"    = azurerm_storage_account.st.name
+    "MyStorageConfig__blobServiceUri" = azurerm_storage_account.st.primary_blob_endpoint
+    "MyStorageConfig__credential"     = "managedidentity"
+    
+    # 禁用 Function 的公网文件系统访问（可选，进一步加固）
+    "WEBSITE_CONTENTOVERVNET" = "1"
+  }
+}
+
+# --- 3. 权限分配 (IAM) ---
+# 必须：Blob 数据权限
+resource "azurerm_role_assignment" "st_blob_data_owner" {
+  scope                = azurerm_storage_account.st.id
+  role_definition_name = "Storage Blob Data Owner"
+  principal_id         = azurerm_linux_function_app.func.identity[0].principal_id
+}
+
+# 必须：Queue 权限（支持 Blob Trigger 扩展）
+resource "azurerm_role_assignment" "st_queue_data" {
+  scope                = azurerm_storage_account.st.id
+  role_definition_name = "Storage Queue Data Contributor"
+  principal_id         = azurerm_linux_function_app.func.identity[0].principal_id
+}
+```
+python
+```
+import logging
+import azure.functions as func
+
+# connection="MyStorageConfig" 对应上面环境变量的前缀
+@app.blob_trigger(arg_name="myblob", path="input-container/{name}",
+                  connection="MyStorageConfig") 
+def blob_trigger_function(myblob: func.InputStream):
+    logging.info(f"Python blob trigger function processed blob \n"
+                 f"Name: {myblob.name}\n"
+                 f"Blob Size: {myblob.length} bytes")
+    
+    # 直接读取内容
+    content = myblob.read().decode('utf-8')
+    logging.info(f"Content: {content}")
+```
