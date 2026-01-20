@@ -223,3 +223,18 @@ def blob_trigger_function(myblob: func.InputStream):
     content = myblob.read().decode('utf-8')
     logging.info(f"Content: {content}")
 ```
+code 2
+```
+import azure.functions as func
+import logging
+
+app = func.FunctionApp()
+
+@app.blob_trigger(arg_name="myblob", 
+                  path="input-container/{name}",
+                  connection="MyStorageConfig") # 对应你在 TF 中设置的环境变量前缀
+def test_function(myblob: func.InputStream):
+    # 此时 myblob 已经是已经打开的数据流，直接读取即可
+    blob_content = myblob.read().decode('utf-8')
+    logging.info(f"成功读取到文件，内容长度为: {len(blob_content)}")
+```
