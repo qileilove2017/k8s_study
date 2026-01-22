@@ -89,4 +89,69 @@ function.json
   ]
 }
 
+``` 
+new reuquest 
+```
+import azure.functions as func
+import logging
+
+app = func.FunctionApp()
+
+# --- Event Hub 触发器 ---
+@app.event_hub_message_trigger(
+    arg_name="azeventhub",
+    event_hub_name="my-hub",
+    connection="EHConnection" # 对应 EHConnection__...
+)
+def eh_trigger(azeventhub: func.EventHubEvent):
+    logging.info("Event Hub 消息消费成功")
+
+# --- Blob 触发器 ---
+@app.blob_trigger(
+    arg_name="myblob",
+    path="input-container/{name}",
+    connection="BlobConnection" # 对应 BlobConnection__...
+)
+def blob_trigger(myblob: func.InputStream):
+    logging.info(f"内网检测到新文件: {myblob.name}")
+```
+
+```
+import azure.functions as func
+import logging
+
+# 初始化 Function App
+app = func.FunctionApp()
+
+# --- 1. Event Hub 触发器 ---
+# 监听内网 Event Hub 消息
+@app.event_hub_message_trigger(
+    arg_name="azeventhub",
+    event_hub_name="your-event-hub-name",  # 具体的 Hub 名称
+    connection="EHConnection"               # 对应设置中的 EHConnection__...
+)
+def eventhub_processor(azeventhub: func.EventHubEvent):
+    # 获取消息正文
+    message_body = azeventhub.get_body().decode('utf-8')
+    
+    logging.info(f"--- Event Hub 触发 ---")
+    logging.info(f"收到消息内容: {message_body}")
+    logging.info(f"消息 Offset: {azeventhub.offset}")
+
+
+# --- 2. Blob 触发器 ---
+# 监听内网存储容器中的新文件
+@app.blob_trigger(
+    arg_name="myblob",
+    path="input-container/{name}",          # 监听的容器名/文件名模式
+    connection="BlobConnection"             # 对应设置中的 BlobConnection__...
+)
+def blob_processor(myblob: func.InputStream):
+    logging.info(f"--- Blob 触发 ---")
+    logging.info(f"文件名: {myblob.name}")
+    logging.info(f"文件大小: {myblob.length} bytes")
+    
+    # 读取内容示例
+    # content = myblob.read().decode('utf-8')
+    # logging.info(f"文件前100个字符: {content[:100]}")
 ```
