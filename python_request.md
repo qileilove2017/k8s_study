@@ -155,3 +155,22 @@ def blob_processor(myblob: func.InputStream):
     # content = myblob.read().decode('utf-8')
     # logging.info(f"文件前100个字符: {content[:100]}")
 ```
+
+host.json
+```
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      }
+    }
+  },
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[4.*, 5.0.0)"
+  }
+}
+```
