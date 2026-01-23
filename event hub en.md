@@ -229,3 +229,14 @@ This architecture establishes a robust and secure foundation by:
 The design achieves a balanced combination of **security, stability, scalability, and auditability**, making it suitable as a standardized enterprise reference architecture for regulated environments.
 
 ---
+### IAM Summary (Runtime and Deployment Permissions)
+
+| Resource | Principal | Minimum Required Role | Description |
+|----------|-----------|------------------------|-------------|
+| Event Hub Namespace / Event Hub | Log Analytics Export Service or IaC / Deployment Identity | `Azure Event Hubs Data Sender` (or Send-enabled SAS policy) | Allows Log Analytics Data Export to publish log data into Event Hub |
+| Event Hub Namespace / Event Hub | Azure Function Managed Identity | `Azure Event Hubs Data Receiver` | Allows Azure Function to consume events via Event Hub Trigger |
+| Storage Account (Blob / Queue / Table) | Azure Function Managed Identity | `Storage Blob Data Contributor` + `Storage Queue Data Contributor` + `Storage Table Data Contributor` | Data-plane access for runtime read/write operations and result persistence |
+| Storage Account | IaC / Platform Deployment Identity | `Storage Account Contributor` | Management-plane access for storage provisioning, network configuration, Private Endpoint binding, lifecycle and diagnostic settings |
+> Note:  
+> Management-plane roles such as `Storage Account Contributor` are strictly assigned to deployment identities only and are never granted to runtime workloads.  
+> Runtime components are limited to data-plane roles in accordance with least-privilege and zero-trust principles.
