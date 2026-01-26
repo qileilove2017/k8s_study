@@ -246,7 +246,29 @@ The confirmed information will be used as direct input for Terraform (IaC) imple
   - Confirmed Data Plane roles only (Event Hub Data Receiver, Storage Data Contributors)
 
 ---
+## 11. Application Insights (Production)
 
+**Decision Required:**  
+☐ Use existing Application Insights  
+☐ Create Application Insights via Terraform  
+
+### If using an existing Application Insights instance, please provide:
+- **Application Insights Name**:
+- **Resource Group**:
+- **Region**:
+- **Type**: Workspace-based (mandatory)
+- **Linked Log Analytics Workspace Name / ID**:
+- **Sampling Strategy** (e.g. Fixed / Adaptive):
+- **Retention (days)**:
+
+### If creating via Terraform, please confirm:
+- Application Insights name  
+- Region (must align with Azure Function and Log Analytics)  
+- Workspace-based mode: Enabled  
+- Linked Log Analytics Workspace ID  
+- Sampling strategy (Adaptive or controlled Fixed for PROD)  
+- Retention period (aligned with workspace)
+---
 ## Final Confirmation
 
 ☐ All required information provided  
