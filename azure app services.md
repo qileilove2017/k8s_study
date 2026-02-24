@@ -287,3 +287,21 @@ provides:
 > A secure, scalable, compliant, and operationally controlled cloud-native application hosting architecture.
 ```
 
+```markdown
+## Azure App Service vs Azure Functions Comparison
+
+| Dimension | Azure App Service | Azure Functions |
+|------------|------------------|------------------|
+| Service Type | Managed Web Application Platform (PaaS) | Event-driven Serverless Compute |
+| Primary Use Case | Web Apps, REST APIs, Backend Services | Event-triggered tasks, scheduled jobs, lightweight APIs |
+| Execution Model | Always running | On-demand (Event-driven) |
+| Pricing Model | Charged per App Service Plan (instance-based) | Charged per execution + execution time (Consumption) or fixed (Premium) |
+| Startup Latency | No cold start | Cold start possible in Consumption plan |
+| Scaling Model | Manual or auto horizontal scaling | Fully automatic elastic scaling (platform-managed) |
+| Environment Control | Greater control over runtime environment | More abstracted, less infrastructure control |
+| Long-running Tasks | Suitable | Execution timeout limits (not ideal for long-running tasks) |
+| Network Isolation | Supports VNet Integration, Private Endpoint, ASE | Supports VNet Integration, Private Endpoint, Premium / ASE |
+| DevOps Support | Supports Deployment Slots (blue-green deployment) | Deployment Slots supported in Premium plan |
+| Typical Scenarios | Enterprise API platforms, core business systems | Message processing, Webhooks, automation jobs |
+| Cost Characteristics | Stable and predictable | Low cost at low traffic; may increase with high execution volume |
+```
