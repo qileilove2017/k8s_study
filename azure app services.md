@@ -285,7 +285,7 @@ For highly regulated enterprise environments, the combination of:
 provides:
 
 > A secure, scalable, compliant, and operationally controlled cloud-native application hosting architecture.
-```
+
 
 # Azure App Service vs Azure Functions Comparison
 
