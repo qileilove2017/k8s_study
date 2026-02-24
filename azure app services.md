@@ -287,8 +287,7 @@ provides:
 > A secure, scalable, compliant, and operationally controlled cloud-native application hosting architecture.
 ```
 
-```markdown
-## Azure App Service vs Azure Functions Comparison
+# Azure App Service vs Azure Functions Comparison
 
 | Dimension | Azure App Service | Azure Functions |
 |------------|------------------|------------------|
@@ -304,4 +303,4 @@ provides:
 | DevOps Support | Supports Deployment Slots (blue-green deployment) | Deployment Slots supported in Premium plan |
 | Typical Scenarios | Enterprise API platforms, core business systems | Message processing, Webhooks, automation jobs |
 | Cost Characteristics | Stable and predictable | Low cost at low traffic; may increase with high execution volume |
-```
+
