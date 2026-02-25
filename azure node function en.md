@@ -99,3 +99,23 @@ resource "azurerm_linux_function_app" "node_func" {
   }
 }
 ```
+### assign Storage permission to the Identity of the Function 
+ 
+The Functions runtime requires at least: 
+ 
+Storage Blob Data Contributor 
+ 
+Storage Queue Data Contributor
+```
+resource "azurerm_role_assignment" "blob_role" {
+  scope                = data.azurerm_storage_account.sa.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_linux_function_app.node_func.identity[0].principal_id
+}
+
+resource "azurerm_role_assignment" "queue_role" {
+  scope                = data.azurerm_storage_account.sa.id
+  role_definition_name = "Storage Queue Data Contributor"
+  principal_id         = azurerm_linux_function_app.node_func.identity[0].principal_id
+}
+```
