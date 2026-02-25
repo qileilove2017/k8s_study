@@ -47,3 +47,55 @@ The Isolated v2 App Service Plan provides predictable compute resources and supp
 
 ### 5.2 Governance and Compliance  
 Governance controls include centralized logging, role-based access reviews, infrastructure-as-code enforcement, and deployment traceability. High availability is achieved through multiple instances within the ASE. Optional cross-region disaster recovery can be implemented using replicated infrastructure and DNS-based failover mechanisms. The resulting architecture balances isolation, security, operational resilience, and long-term maintainability.
+## tf code
+### get the existing resources
+```
+data "azurerm_resource_group" "rg" {
+  name = "rg-ase-prod"
+}
+
+data "azurerm_service_plan" "plan" {
+  name                = "asp-ase-isolatedv2"
+  resource_group_name = data.azurerm_resource_group.rg.name
+}
+
+data "azurerm_storage_account" "sa" {
+  name                = "stasefuncprod01"
+  resource_group_name = data.azurerm_resource_group.rg.name
+}
+```
+### Create a Linux Node Function
+
+```
+resource "azurerm_linux_function_app" "node_func" {
+  name                = "func-node-ase-prod"
+  resource_group_name = data.azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+
+  service_plan_id      = data.azurerm_service_plan.plan.id
+  storage_account_name = data.azurerm_storage_account.sa.name
+
+  # 👇 关键：使用 MI 访问 Storage
+  storage_uses_managed_identity = true
+
+  https_only = true
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    application_stack {
+      node_version = "20"
+    }
+
+    ftps_state = "Disabled"
+  }
+
+  app_settings = {
+    "FUNCTIONS_EXTENSION_VERSION" = "~4"
+    "FUNCTIONS_WORKER_RUNTIME"    = "node"
+    "WEBSITE_RUN_FROM_PACKAGE"    = "1"
+  }
+}
+```
