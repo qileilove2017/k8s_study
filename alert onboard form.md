@@ -1,299 +1,180 @@
-# 📘 Monitoring Onboarding Form  
-## Azure Monitor Log Alert 接入申请表
+# 📘 Monitoring Onboarding Form (Minimal Version)
+## Azure Monitor Log Alert – Required Information
 
 ---
 
-## 1️⃣ 基础信息
-
-| 字段 | 必填 | 示例 | 说明 |
-|------|------|------|------|
-| Application Name | ✅ | credit-api | 应用统一名称 |
-| Environment | ✅ | dev / sit / uat / prod | 告警分环境管理 |
-| Subscription ID | ✅ | xxxxx | 所在订阅 |
-| Resource Group | ✅ | rg-credit-prod | 应用所在 RG |
-| Deployment Type | ✅ | App Service / Function / AKS | 部署形态 |
-| cloud_RoleName | ✅ | credit-api | KQL 隔离关键字段 |
-| Business Owner | ✅ | 张三 | 业务负责人 |
-| Technical Owner | ✅ | 李四 | 技术负责人 |
-
----
-
-## 2️⃣ 日志接入确认
-
-| 项目 | 是否完成 | 备注 |
-|------|----------|------|
-| Application Insights 已启用 | ☐ 是 ☐ 否 | |
-| Workspace-based 模式 | ☐ 是 ☐ 否 | |
-| Diagnostic Settings 已配置 | ☐ 是 ☐ 否 | |
-| 关键依赖日志已开启 | ☐ 是 ☐ 否 | |
-
----
-
-## 3️⃣ 可用性告警（Availability）
-
-### 3.1 5xx 错误率监控
-
-| 项目 | 必填 | 示例 |
-|------|------|------|
-| 是否启用 | ☐ 是 ☐ 否 | |
-| 监控方式 | ☐ 错误数量 ☐ 错误率 | 推荐错误率 |
-| 错误率阈值 | ✅ | 5% |
-| 时间窗口 | ✅ | 5 分钟 |
-| 最小请求量门槛 | 推荐 | 200 |
-| Severity | ✅ | Sev1 |
-
----
-
-## 4️⃣ 性能告警（Performance）
-
-### 4.1 Latency 监控
-
-| 项目 | 必填 | 示例 |
-|------|------|------|
-| 是否启用 | ☐ 是 ☐ 否 | |
-| 指标 | ☐ p95 ☐ p99 | 推荐 p95 |
-| 阈值 | ✅ | > 2000ms |
-| 时间窗口 | ✅ | 5 分钟 |
-| Severity | ✅ | Sev2 |
-
----
-
-## 5️⃣ 依赖监控（Dependencies）
-
-| 项目 | 必填 | 示例 |
-|------|------|------|
-| 是否启用 | ☐ 是 ☐ 否 | |
-| 依赖类型 | SQL / Redis / External API | |
-| 失败率阈值 | | 3% |
-| 时间窗口 | | 5 分钟 |
-| Severity | | Sev2 |
-
----
-
-## 6️⃣ 异常监控（Exceptions）
-
-| 项目 | 必填 | 示例 |
-|------|------|------|
-| 是否启用 | ☐ 是 ☐ 否 | |
-| 是否排除已知异常 | ☐ 是 ☐ 否 | |
-| 阈值 | | 50 / 5 分钟 |
-| Severity | | Sev2 |
-
----
-
-## 7️⃣ 告警分级确认
-
-| Severity | 说明 | 选择 |
-|----------|------|------|
-| Sev0 | 全站不可用 | ☐ |
-| Sev1 | 核心功能异常 | ☐ |
-| Sev2 | 单模块异常 | ☐ |
-| Sev3 | 性能预警 | ☐ |
-| Sev4 | 观测类 | ☐ |
-
----
-
-## 8️⃣ 通知与响应策略
-
-| 项目 | 必填 | 示例 |
-|------|------|------|
-| Primary Email | ✅ | team@company.com |
-| Teams Channel | 推荐 | #credit-alerts |
-| 是否接入 ITSM | ☐ 是 ☐ 否 | |
-| ITSM Group | | Credit Support |
-| 是否需要自动化修复 | ☐ 是 ☐ 否 | |
-
----
-
-## 9️⃣ 网络与安全（如适用）
-
-| 项目 | 是否 |
-|------|------|
-| Workspace 已配置 Private Endpoint | ☐ 是 ☐ 否 |
-| 使用 AMPLS | ☐ 是 ☐ 否 |
-| Webhook 为内网地址 | ☐ 是 ☐ 否 |
-
----
-
-## 🔟 DevOps 内部填写（非 Pod Team）
-
-| 项目 | 填写 |
-|------|------|
-| Terraform Module Version | |
-| Alert Naming Convention | |
-| 审批人 | |
-| 创建时间 | |
-| 生效时间 | |
-
----
-
-# 📌 说明
-
-- 所有生产告警必须提供明确阈值与 Severity。
-- DevOps 不代替业务定义 SLA。
-- 默认推荐：
-  - evaluation_frequency = 5m
-  - failing_periods = 3/2
-  - 使用错误率而非错误数量
-  - KQL 必须包含时间窗口与 cloud_RoleName 过滤
-
----
-
-# 🏗 标准流程
-
-1. Pod Team 填写表单  
-2. DevOps Review 阈值合理性  
-3. PR 创建 Terraform Alert  
-4. Code Review 审批  
-5. Apply 部署  
-6. 验证告警触发  
-
-# 📘 Monitoring Onboarding Form  
-## Azure Monitor Log Alert Integration Request
-
----
-
-## 1️⃣ Basic Information
+# 1️⃣ Application Identification
 
 | Field | Required | Example | Description |
 |--------|----------|----------|-------------|
-| Application Name | ✅ | credit-api | Official application name |
-| Environment | ✅ | dev / sit / uat / prod | Alert rules are environment-specific |
-| Subscription ID | ✅ | xxxxx | Azure subscription where app is deployed |
-| Resource Group | ✅ | rg-credit-prod | Resource group of the application |
-| Deployment Type | ✅ | App Service / Function / AKS | Hosting type |
-| cloud_RoleName | ✅ | credit-api | Critical for KQL isolation |
-| Business Owner | ✅ | John Smith | Business owner |
-| Technical Owner | ✅ | Jane Doe | Technical owner |
+| Application Name | ✅ | credit-api | Logical application name |
+| Environment | ✅ | dev / sit / uat / prod | Alert environment |
+| Subscription ID | ✅ | xxxxx | Azure subscription ID |
+| Resource Group | ✅ | rg-credit-prod | Resource group |
+| cloud_RoleName | ✅ | credit-api | Used for KQL filtering |
 
 ---
 
-## 2️⃣ Logging Configuration Confirmation
+# 2️⃣ Log Analytics Workspace
 
-| Item | Completed | Notes |
-|------|-----------|-------|
-| Application Insights Enabled | ☐ Yes ☐ No | |
-| Workspace-based Mode Enabled | ☐ Yes ☐ No | |
-| Diagnostic Settings Configured | ☐ Yes ☐ No | |
-| Critical Dependency Logs Enabled | ☐ Yes ☐ No | |
+| Field | Required | Example |
+|--------|----------|----------|
+| Workspace Name | ✅ | law-shared-prod |
+| Workspace Resource ID | ✅ | /subscriptions/.../providers/Microsoft.OperationalInsights/workspaces/... |
+
+> Alert Engine requires Workspace as the data source.
 
 ---
 
-## 3️⃣ Availability Alerts
+# 3️⃣ Alert Definition (Core Requirement)
 
-### 3.1 5xx Error Monitoring
+## 3.1 Alert Objective
 
-| Item | Required | Example |
-|------|----------|----------|
-| Enable Monitoring | ☐ Yes ☐ No | |
-| Monitoring Method | ☐ Error Count ☐ Error Rate | Error Rate recommended |
-| Error Rate Threshold | ✅ | 5% |
-| Time Window | ✅ | 5 minutes |
-| Minimum Request Threshold | Recommended | 200 |
+| Field | Required | Example |
+|--------|----------|----------|
+| Alert Purpose | ✅ | 5xx Error Rate |
+| KQL Query | ✅ | (Provide full KQL) |
+| Metric Column Name | ✅ | errorRate |
+| Operator | ✅ | GreaterThan |
+| Threshold | ✅ | 0.05 |
+| Evaluation Frequency | Recommended | PT5M |
+| Window Duration | Recommended | PT5M |
+| Failing Periods (N/M) | Recommended | 3/2 |
 | Severity | ✅ | Sev1 |
 
----
-
-## 4️⃣ Performance Alerts
-
-### 4.1 Latency Monitoring
-
-| Item | Required | Example |
-|------|----------|----------|
-| Enable Monitoring | ☐ Yes ☐ No | |
-| Metric | ☐ p95 ☐ p99 | p95 recommended |
-| Threshold | ✅ | > 2000 ms |
-| Time Window | ✅ | 5 minutes |
-| Severity | ✅ | Sev2 |
+> KQL must include time filter and summarize statement.
 
 ---
 
-## 5️⃣ Dependency Monitoring
+# 4️⃣ Action Group (Notification)
 
-| Item | Required | Example |
-|------|----------|----------|
-| Enable Monitoring | ☐ Yes ☐ No | |
-| Dependency Type | SQL / Redis / External API | |
-| Failure Rate Threshold | | 3% |
-| Time Window | | 5 minutes |
-| Severity | | Sev2 |
-
----
-
-## 6️⃣ Exception Monitoring
-
-| Item | Required | Example |
-|------|----------|----------|
-| Enable Monitoring | ☐ Yes ☐ No | |
-| Exclude Known Exceptions | ☐ Yes ☐ No | |
-| Threshold | | 50 / 5 minutes |
-| Severity | | Sev2 |
-
----
-
-## 7️⃣ Severity Classification
-
-| Severity | Description | Selection |
-|----------|-------------|-----------|
-| Sev0 | Full system outage | ☐ |
-| Sev1 | Critical functionality failure | ☐ |
-| Sev2 | Module-level issue | ☐ |
-| Sev3 | Performance degradation | ☐ |
-| Sev4 | Informational / Observability | ☐ |
-
----
-
-## 8️⃣ Notification & Response Strategy
-
-| Item | Required | Example |
-|------|----------|----------|
+| Field | Required | Example |
+|--------|----------|----------|
 | Primary Email | ✅ | team@company.com |
-| Teams Channel | Recommended | #credit-alerts |
-| ITSM Integration Required | ☐ Yes ☐ No | |
-| ITSM Support Group | | Credit Support |
-| Auto-remediation Required | ☐ Yes ☐ No | |
+| Teams Channel (if any) | Optional | #credit-alerts |
+| ITSM Integration Required | ☐ Yes ☐ No |
+| Webhook Required | ☐ Yes ☐ No |
 
 ---
 
-## 9️⃣ Network & Security (If Applicable)
+# 5️⃣ Validation Checklist
 
-| Item | Yes / No |
-|------|----------|
-| Workspace Configured with Private Endpoint | ☐ Yes ☐ No |
-| Using Azure Monitor Private Link Scope (AMPLS) | ☐ Yes ☐ No |
-| Webhook Endpoint is Internal (Private Network) | ☐ Yes ☐ No |
+Pod Team confirms:
 
----
-
-## 🔟 DevOps Internal Section (For Platform Team Only)
-
-| Item | Value |
-|------|-------|
-| Terraform Module Version | |
-| Alert Naming Convention | |
-| Approved By | |
-| Created Date | |
-| Effective Date | |
+- ☐ KQL has time window (e.g., ago(5m))
+- ☐ KQL includes summarize statement
+- ☐ cloud_RoleName filter applied
+- ☐ Threshold reviewed and agreed
+- ☐ Severity aligned with SLA
 
 ---
 
-# 📌 Notes
+# 📌 Important Notes
 
-- All production alerts must define explicit thresholds and severity levels.
-- DevOps does not define SLA or business tolerance — this must be provided by the Pod Team.
-- Recommended defaults:
-  - evaluation_frequency = 5 minutes
-  - failing_periods = 3/2
-  - Prefer error rate over error count
-  - KQL must include time window and cloud_RoleName filter
+- Alert Engine only requires: Workspace + KQL.
+- Terraform will create the alert rule in Azure Monitor.
+- DevOps does not define business thresholds.
+- Production alerts must define severity explicitly.
 
 ---
 
-# 🏗 Standard Onboarding Workflow
+# 🏗 Workflow
 
-1. Pod Team submits completed form  
-2. DevOps reviews threshold and configuration  
-3. Terraform alert rule created via Pull Request  
-4. Code review and approval  
-5. Deployment (terraform apply)  
-6. Alert validation and testing  
+1. Pod Team submits this form
+2. DevOps reviews KQL and threshold
+3. Terraform alert rule created via PR
+4. Code review & approval
+5. Deployment
+6. Alert validation
+
+# 📘 监控接入申请表（极简版）
+## Azure Monitor Log Alert 必需信息表
+
+---
+
+# 1️⃣ 应用标识信息
+
+| 字段 | 是否必填 | 示例 | 说明 |
+|------|----------|------|------|
+| 应用名称 | ✅ | credit-api | 应用逻辑名称 |
+| 环境 | ✅ | dev / sit / uat / prod | 告警所属环境 |
+| 订阅 ID | ✅ | xxxxx | 应用所在订阅 |
+| 资源组 | ✅ | rg-credit-prod | 应用所在资源组 |
+| cloud_RoleName | ✅ | credit-api | KQL 查询隔离字段 |
+
+---
+
+# 2️⃣ Log Analytics Workspace 信息
+
+| 字段 | 是否必填 | 示例 |
+|------|----------|------|
+| Workspace 名称 | ✅ | law-shared-prod |
+| Workspace 资源 ID | ✅ | /subscriptions/.../providers/Microsoft.OperationalInsights/workspaces/... |
+
+> Alert Engine 通过 Workspace 执行 KQL 查询。
+
+---
+
+# 3️⃣ 告警定义（核心信息）
+
+## 3.1 告警目标
+
+| 字段 | 是否必填 | 示例 |
+|------|----------|------|
+| 告警目的 | ✅ | 5xx 错误率 |
+| KQL 查询语句 | ✅ | （提供完整 KQL） |
+| 度量列名称 | ✅ | errorRate |
+| 比较符 | ✅ | GreaterThan |
+| 阈值 | ✅ | 0.05 |
+| 执行频率 | 建议 | PT5M |
+| 时间窗口 | 建议 | PT5M |
+| 抗抖动策略 (N/M) | 建议 | 3/2 |
+| 严重级别 | ✅ | Sev1 |
+
+> KQL 必须包含：
+> - 时间过滤（例如 ago(5m)）
+> - summarize 语句
+> - cloud_RoleName 过滤
+
+---
+
+# 4️⃣ 通知配置（Action Group）
+
+| 字段 | 是否必填 | 示例 |
+|------|----------|------|
+| 主要通知邮箱 | ✅ | team@company.com |
+| Teams 通道（如有） | 可选 | #credit-alerts |
+| 是否接入 ITSM | ☐ 是 ☐ 否 |
+| 是否需要 Webhook | ☐ 是 ☐ 否 |
+
+---
+
+# 5️⃣ 校验清单
+
+Pod Team 需确认：
+
+- ☐ KQL 包含时间窗口
+- ☐ KQL 包含 summarize
+- ☐ 已添加 cloud_RoleName 过滤
+- ☐ 阈值已确认合理
+- ☐ 严重级别符合 SLA
+
+---
+
+# 📌 重要说明
+
+- Alert Engine 运行仅依赖：Workspace + KQL。
+- Terraform 负责在 Azure Monitor 中创建规则。
+- DevOps 不负责定义业务阈值。
+- 生产环境必须明确 Severity。
+
+---
+
+# 🏗 接入流程
+
+1. Pod Team 填写表单  
+2. DevOps 审核 KQL 与阈值  
+3. 创建 Terraform PR  
+4. 代码评审  
+5. 部署生效  
+6. 验证告警触发  
